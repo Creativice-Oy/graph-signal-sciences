@@ -1,12 +1,12 @@
 import { RelationshipClass, StepSpec } from '@jupiterone/integration-sdk-core';
 import { IntegrationConfig } from '../../../../src/config';
 
-export const userSpec: StepSpec<IntegrationConfig>[] = [
+export const cloudwafSpec: StepSpec<IntegrationConfig>[] = [
   {
     /**
      * ENDPOINT: /corps/{corpName}/cloudwafinstance
      */
-    id: 'fetch-fetchcloudwaf',
+    id: 'fetch-cloudwaf',
     name: 'Fetch Cloud WAF',
     entities: [
       {
