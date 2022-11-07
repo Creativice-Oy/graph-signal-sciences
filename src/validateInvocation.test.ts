@@ -31,8 +31,8 @@ describe('validate invocation', () => {
 
     const executionContext = createMockExecutionContext({
       instanceConfig: {
-        apiUser: 'INVALID',
-        apiToken: 'INVALID',
+        email: 'INVALID',
+        password: 'INVALID',
       },
     });
 

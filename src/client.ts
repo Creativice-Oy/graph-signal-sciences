@@ -1,6 +1,5 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import axiosRetry from 'axios-retry';
-
 import {
   IntegrationProviderAuthenticationError,
   IntegrationProviderAPIError,
@@ -11,6 +10,7 @@ import { IntegrationConfig } from './config';
 import {
   SignalSciencesUser,
   SignalSciencesCorp,
+  SignalSciencesCloudWAF,
   SigSciResponseFormat,
 } from './types';
 
@@ -26,6 +26,11 @@ const BASE_URI = 'https://dashboard.signalsciences.net/api/v0';
  * TODO: Add pagination.
  */
 export class SignalSciencesAPIClient {
+  private tokenRequest: {
+    email: string;
+    password: string;
+  };
+
   constructor(
     readonly logger: IntegrationLogger,
     readonly config: IntegrationConfig,
@@ -40,14 +45,18 @@ export class SignalSciencesAPIClient {
         return 0;
       },
     });
+    this.tokenRequest = {
+      email: config.email,
+      password: config.password,
+    };
   }
+
+  private token: string;
 
   public async verifyAuthentication(): Promise<void> {
     const endpoint = `${BASE_URI}/corps`;
 
-    await this.fetch(endpoint, {
-      headers: this.headers,
-    });
+    await this.fetch(endpoint);
   }
 
   /**
@@ -61,9 +70,7 @@ export class SignalSciencesAPIClient {
   ): Promise<void> {
     const endpoint = `${BASE_URI}/corps`;
 
-    const { data } = await this.fetch(endpoint, {
-      headers: this.headers,
-    });
+    const { data } = await this.fetch(endpoint);
 
     for (const corp of data) {
       await iteratee(corp);
@@ -82,12 +89,23 @@ export class SignalSciencesAPIClient {
   ): Promise<void> {
     const endpoint = this.buildEndpoint(corpName, '/users');
 
-    const { data } = await this.fetch(endpoint, {
-      headers: this.headers,
-    });
+    const { data } = await this.fetch(endpoint);
 
     for (const user of data) {
       await iteratee(user);
+    }
+  }
+
+  public async iterateCloudWAFInstances(
+    corpName: string,
+    iteratee: ResourceIteratee<SignalSciencesCloudWAF>,
+  ): Promise<void> {
+    const endpoint = this.buildEndpoint(corpName, '/cloudwafInstances');
+
+    const { data } = await this.fetch(endpoint);
+
+    for (const cloudwaf of data) {
+      await iteratee(cloudwaf);
     }
   }
 
@@ -103,12 +121,20 @@ export class SignalSciencesAPIClient {
     }
   }
 
-  private get headers() {
-    return {
-      'x-api-user': this.config.apiUser,
-      'x-api-token': this.config.apiToken,
-      'Content-Type': 'application/json',
-    };
+  public async authenticate(): Promise<any> {
+    try {
+      const url = require('url');
+      const params = new url.URLSearchParams(this.tokenRequest);
+      const response = await axios.post(`${BASE_URI}/auth`, params.toString());
+
+      return response.data.token;
+    } catch (err) {
+      throw new IntegrationProviderAuthenticationError({
+        endpoint: `${BASE_URI}/auth`,
+        status: err.status,
+        statusText: err.statusText,
+      });
+    }
   }
 
   /**
@@ -117,12 +143,12 @@ export class SignalSciencesAPIClient {
    * @param options
    * @returns Promise
    */
-  private async fetch(
-    endpoint: string,
-    options: AxiosRequestConfig,
-  ): Promise<SigSciResponseFormat> {
+  private async fetch(endpoint: string): Promise<SigSciResponseFormat> {
+    this.token = await this.authenticate();
     const { status, statusText, data } = await axios.get(endpoint, {
-      ...options,
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+      },
       // Prevents non-200 responses from failing the promise.
       validateStatus: () => true,
     });

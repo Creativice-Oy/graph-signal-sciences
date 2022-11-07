@@ -7,10 +7,10 @@ if (process.env.LOAD_ENV) {
     path: path.join(__dirname, '../.env'),
   });
 }
-const DEFAULT_API_USER = 'dummy-sigsci-api-user';
-const DEFAULT_API_TOKEN = 'dummy-sigsci-api-token';
+const DEFAULT_EMAIL = 'dummy-sigsci-api-user';
+const DEFAULT_PASSWORD = 'dummy-sigsci-api-password';
 
 export const integrationConfig: IntegrationConfig = {
-  apiUser: process.env.API_USER || DEFAULT_API_USER,
-  apiToken: process.env.API_TOKEN || DEFAULT_API_TOKEN,
+  email: process.env.EMAIL || DEFAULT_EMAIL,
+  password: process.env.PASSWORD || DEFAULT_PASSWORD,
 };
